@@ -26,6 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_ltifederation';
 $plugin->version   = 2026040901;
-$plugin->requires  = 2024100700; // Moodle 4.5.
+$plugin->requires  = 2024042200; // Moodle 4.4.
+$plugin->supported = [404, 405]; // Tested against Moodle 4.4 and 4.5.
 $plugin->maturity  = MATURITY_ALPHA;
 $plugin->release   = '0.1.0';
