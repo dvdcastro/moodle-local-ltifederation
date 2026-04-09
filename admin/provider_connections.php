@@ -160,28 +160,37 @@ if (empty($providers)) {
     $table = new html_table();
     $table->attributes['class'] = 'table table-striped generaltable';
     $table->head = [
-        get_string('provider_label', 'local_ltifederation'),
-        get_string('provider_url', 'local_ltifederation'),
-        get_string('provider_autosync', 'local_ltifederation'),
-        get_string('provider_lastsync', 'local_ltifederation'),
-        get_string('provider_syncstatus', 'local_ltifederation'),
+        get_string('provider_label', 'local_ltifederation') .
+            $OUTPUT->help_icon('provider_label', 'local_ltifederation'),
+        get_string('provider_url', 'local_ltifederation') .
+            $OUTPUT->help_icon('provider_url', 'local_ltifederation'),
+        get_string('provider_autosync', 'local_ltifederation') .
+            $OUTPUT->help_icon('provider_autosync', 'local_ltifederation'),
+        get_string('provider_lastsync', 'local_ltifederation') .
+            $OUTPUT->help_icon('provider_lastsync', 'local_ltifederation'),
+        get_string('provider_syncstatus', 'local_ltifederation') .
+            $OUTPUT->help_icon('provider_syncstatus', 'local_ltifederation'),
         get_string('provider_actions', 'local_ltifederation'),
     ];
 
     foreach ($providers as $provider) {
-        // Status badge.
+        // Status indicator with color-coded icon.
         if ($provider->syncstatus === 'ok') {
-            $badge = html_writer::span(
-                get_string('status_ok', 'local_ltifederation'),
-                'badge badge-success'
-            );
+            $statusicon = html_writer::tag('span', '&#10003;', ['class' => 'text-success font-weight-bold', 'title' => get_string('status_ok', 'local_ltifederation')]);
+            $badge = $statusicon . ' ' . html_writer::span(get_string('status_ok', 'local_ltifederation'), 'badge badge-success ml-1');
         } else if ($provider->syncstatus === 'error') {
-            $badge = html_writer::span(
-                get_string('status_error', 'local_ltifederation'),
-                'badge badge-danger'
-            );
+            $statusicon = html_writer::tag('span', '&#10007;', ['class' => 'text-danger font-weight-bold', 'title' => get_string('status_error', 'local_ltifederation')]);
+            $badge = $statusicon . ' ' . html_writer::span(get_string('status_error', 'local_ltifederation'), 'badge badge-danger ml-1');
+            // Show collapsed error details.
+            if (!empty($provider->syncmessage)) {
+                $badge .= html_writer::start_tag('details', ['class' => 'mt-1']);
+                $badge .= html_writer::tag('summary', get_string('show_sync_error', 'local_ltifederation'), ['class' => 'small text-danger']);
+                $badge .= html_writer::tag('pre', s($provider->syncmessage), ['class' => 'small text-danger mt-1 mb-0']);
+                $badge .= html_writer::end_tag('details');
+            }
         } else {
-            $badge = html_writer::span('-', 'badge badge-secondary');
+            $statusicon = html_writer::tag('span', '&mdash;', ['class' => 'text-muted', 'title' => get_string('provider_never_synced', 'local_ltifederation')]);
+            $badge = $statusicon . ' ' . html_writer::span(get_string('provider_never_synced', 'local_ltifederation'), 'badge badge-secondary ml-1');
         }
 
         $lastsync = $provider->lastsync

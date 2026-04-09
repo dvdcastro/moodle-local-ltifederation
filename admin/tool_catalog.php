@@ -65,7 +65,7 @@ if ($action === 'sync') {
     $task = new sync_tools();
     $task->set_custom_data(['providerid' => $providerid]);
     \core\task\manager::queue_adhoc_task($task, true);
-    \core\notification::success(get_string('provider_sync_queued', 'local_ltifederation'));
+    \core\notification::info(get_string('provider_sync_queued_info', 'local_ltifederation'));
     redirect($PAGE->url);
 }
 
@@ -106,12 +106,21 @@ echo html_writer::start_div('card mb-4');
 echo html_writer::start_div('card-body');
 echo html_writer::tag('h5', get_string('provider_info_label', 'local_ltifederation') . ': ' . format_string($provider->label), ['class' => 'card-title']);
 
+// Status badge for provider sync status.
+if ($provider->syncstatus === 'ok') {
+    $syncstatusbadge = html_writer::span(get_string('status_ok', 'local_ltifederation'), 'badge badge-success');
+} else if ($provider->syncstatus === 'error') {
+    $syncstatusbadge = html_writer::span(get_string('status_error', 'local_ltifederation'), 'badge badge-danger');
+} else {
+    $syncstatusbadge = html_writer::span('-', 'badge badge-secondary');
+}
+
 $inforows = [
     get_string('provider_info_url', 'local_ltifederation')      => format_string($provider->providerurl),
     get_string('provider_info_lastsync', 'local_ltifederation') => $provider->lastsync
         ? userdate($provider->lastsync, get_string('strftimedatetime', 'langconfig'))
         : get_string('provider_never_synced', 'local_ltifederation'),
-    get_string('provider_info_status', 'local_ltifederation')   => $provider->syncstatus ?: '-',
+    get_string('provider_info_status', 'local_ltifederation')   => $syncstatusbadge,
 ];
 
 $dl = '';
@@ -121,13 +130,21 @@ foreach ($inforows as $label => $value) {
 }
 echo html_writer::tag('dl', $dl, ['class' => 'row']);
 
+// Show collapsed error message if last sync was an error.
+if ($provider->syncstatus === 'error' && !empty($provider->syncmessage)) {
+    echo html_writer::start_tag('details', ['class' => 'mt-1']);
+    echo html_writer::tag('summary', get_string('show_sync_error', 'local_ltifederation'), ['class' => 'text-danger']);
+    echo html_writer::tag('pre', s($provider->syncmessage), ['class' => 'text-danger small mt-1']);
+    echo html_writer::end_tag('details');
+}
+
 // Sync now button.
 $syncurl = new moodle_url($PAGE->url, ['action' => 'sync', 'sesskey' => sesskey()]);
-echo html_writer::link($syncurl, get_string('sync_now', 'local_ltifederation'), ['class' => 'btn btn-secondary mr-2']);
+echo html_writer::link($syncurl, get_string('sync_now', 'local_ltifederation'), ['class' => 'btn btn-secondary mr-2 mt-2']);
 
 // Back link.
 $backurl = new moodle_url('/local/ltifederation/admin/provider_connections.php');
-echo html_writer::link($backurl, get_string('back_to_providers', 'local_ltifederation'), ['class' => 'btn btn-outline-secondary']);
+echo html_writer::link($backurl, get_string('back_to_providers', 'local_ltifederation'), ['class' => 'btn btn-outline-secondary mt-2']);
 
 echo html_writer::end_div(); // card-body
 echo html_writer::end_div(); // card
@@ -161,58 +178,85 @@ if (empty($tools)) {
     ];
 
     foreach ($tools as $tool) {
-        // Registration state badge.
-        switch ($tool->regstate) {
-            case 'registered':
-                $badge = html_writer::span(
-                    get_string('regstate_registered', 'local_ltifederation'),
-                    'badge badge-success'
-                );
-                break;
-            case 'pending':
-                $badge = html_writer::span(
-                    get_string('regstate_pending', 'local_ltifederation'),
-                    'badge badge-warning'
-                );
-                break;
-            case 'error':
-                $badge = html_writer::span(
-                    get_string('regstate_error', 'local_ltifederation'),
-                    'badge badge-danger'
-                );
-                break;
-            default:
-                $badge = html_writer::span(
-                    get_string('regstate_none', 'local_ltifederation'),
-                    'badge badge-secondary'
-                );
-        }
-
-        // If remotestatus = 1 (removed from provider), add visual indicator.
+        // If remotestatus=1 (removed from provider), show a "Removed" badge regardless of regstate.
         if ($tool->remotestatus) {
-            $badge .= ' ' . html_writer::span('(removed)', 'badge badge-light text-muted');
+            $badge = html_writer::tag(
+                'span',
+                get_string('regstate_removed', 'local_ltifederation'),
+                ['class' => 'badge badge-dark', 'style' => 'text-decoration: line-through;']
+            );
+            // Still show the underlying regstate as secondary info.
+            if (!empty($tool->regstate) && $tool->regstate !== 'none') {
+                $badge .= ' ' . html_writer::span(
+                    get_string('regstate_' . $tool->regstate, 'local_ltifederation'),
+                    'badge badge-secondary ml-1'
+                );
+            }
+        } else {
+            // Registration state badge.
+            switch ($tool->regstate) {
+                case 'registered':
+                    $badge = html_writer::span(
+                        get_string('regstate_registered', 'local_ltifederation'),
+                        'badge badge-success'
+                    );
+                    break;
+                case 'pending':
+                    $badge = html_writer::span(
+                        get_string('regstate_pending', 'local_ltifederation'),
+                        'badge badge-warning'
+                    );
+                    break;
+                case 'error':
+                    $badge = html_writer::span(
+                        get_string('regstate_error', 'local_ltifederation'),
+                        'badge badge-danger'
+                    );
+                    break;
+                default:
+                    $badge = html_writer::span(
+                        get_string('regstate_none', 'local_ltifederation'),
+                        'badge badge-secondary'
+                    );
+            }
         }
 
-        // Per-row register link.
+        // For error state, show collapsed error message.
+        $statuscell = $badge;
+        if ($tool->regstate === 'error' && !empty($tool->regerror)) {
+            $statuscell .= html_writer::start_tag('details', ['class' => 'mt-1']);
+            $statuscell .= html_writer::tag('summary', get_string('show_error_details', 'local_ltifederation'), ['class' => 'small text-danger']);
+            $statuscell .= html_writer::tag('pre', s($tool->regerror), ['class' => 'small text-danger mt-1 mb-0']);
+            $statuscell .= html_writer::end_tag('details');
+        }
+
+        // Per-row action button.
         $registerurl = new moodle_url($PAGE->url, [
-            'action'    => 'register',
-            'ids[]'     => $tool->id,
-            'sesskey'   => sesskey(),
+            'action'  => 'register',
+            'ids[]'   => $tool->id,
+            'sesskey' => sesskey(),
         ]);
-        $reregisterurl = $registerurl; // Same URL – engine handles idempotency.
 
-        $actionlabel = ($tool->regstate === 'registered')
-            ? get_string('tool_reregister', 'local_ltifederation')
-            : get_string('tool_register', 'local_ltifederation');
+        if ($tool->regstate === 'registered') {
+            $actionlabel = get_string('tool_reregister', 'local_ltifederation');
+            $btnclass    = 'btn btn-sm btn-outline-secondary';
+        } else if ($tool->regstate === 'error') {
+            // Re-register button for error state (re-queues registration with fresh catalog context).
+            $actionlabel = get_string('tool_reregister', 'local_ltifederation');
+            $btnclass    = 'btn btn-sm btn-outline-danger';
+        } else {
+            $actionlabel = get_string('tool_register', 'local_ltifederation');
+            $btnclass    = 'btn btn-sm btn-outline-primary';
+        }
 
-        $actionlink = html_writer::link($registerurl, $actionlabel, ['class' => 'btn btn-sm btn-outline-primary']);
+        $actionlink = html_writer::link($registerurl, $actionlabel, ['class' => $btnclass]);
 
         $table->data[] = [
             html_writer::checkbox('ids[]', $tool->id, false, '', ['class' => 'ltifed-tool-checkbox']),
             format_string($tool->name),
             format_string($tool->coursefullname ?? ''),
             format_string($tool->ltiversion ?? ''),
-            $badge,
+            $statuscell,
             $actionlink,
         ];
     }

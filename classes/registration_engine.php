@@ -38,16 +38,25 @@ use mod_lti\local\ltiopenid\registration_helper;
 class registration_engine {
 
     /**
+     * Minimum seconds between registration attempts for the same cache entry
+     * (rate-limiting guard, uses timefetched field as a proxy for last attempt).
+     */
+    const MIN_RETRY_INTERVAL = 60;
+
+    /**
      * Register a tool from the catalog cache using LTI Dynamic Registration.
      *
      * Steps:
-     * 1. Anti-SSRF check: registration URL host must match provider URL host.
-     * 2. Idempotency check: if already registered, skip.
-     * 3. Generate JWT registration token (RS256, signed with mod_lti private key).
-     * 4. Build full registration URL and GET it.
-     * 5. Follow the registration flow (the enrol_lti register.php handles the POST to tool).
-     * 6. Find new lti_types row by clientid, mark state=1.
-     * 7. Update cache entry regstate.
+     * 1. HTTPS enforcement: registration URL must use HTTPS (unless localhost).
+     * 2. Anti-SSRF check: registration URL host must match provider URL host.
+     * 3. Idempotency check: if already registered, skip.
+     * 4. Orphan detection: check for an existing lti_types row by launch URL.
+     * 5. Rate limiting: do not retry within 60 seconds.
+     * 6. Generate JWT registration token (RS256, signed with mod_lti private key).
+     * 7. Build full registration URL and GET it.
+     * 8. Follow the registration flow.
+     * 9. Find new lti_types row by clientid, mark state=1.
+     * 10. Update cache entry regstate.
      *
      * @param \stdClass $cacheentry  A row from local_ltifed_catalog_cache.
      * @param \stdClass $provider    A row from local_ltifed_providers.
@@ -56,10 +65,22 @@ class registration_engine {
     public function register_tool(\stdClass $cacheentry, \stdClass $provider): void {
         global $DB, $CFG;
 
-        // --- Step 1: Anti-SSRF validation ---
-        $regurl     = $cacheentry->registration_url ?? '';
+        $regurl      = $cacheentry->registration_url ?? '';
         $providerurl = $provider->providerurl ?? '';
 
+        // --- Step 1: HTTPS enforcement ---
+        if (!empty($regurl)) {
+            $scheme  = strtolower(parse_url($regurl, PHP_URL_HOST) ? (parse_url($regurl, PHP_URL_SCHEME) ?? '') : '');
+            $reghost = parse_url($regurl, PHP_URL_HOST);
+            $islocalhost = in_array(strtolower($reghost ?? ''), ['localhost', '127.0.0.1', '::1'], true);
+
+            if (!$islocalhost && strtolower(parse_url($regurl, PHP_URL_SCHEME) ?? '') !== 'https') {
+                $this->update_cache_error($cacheentry->id, 'Registration URL must use HTTPS.');
+                throw new \moodle_exception('error_https_required', 'local_ltifederation');
+            }
+        }
+
+        // --- Step 2: Anti-SSRF validation ---
         if (empty($regurl)) {
             $this->update_cache_error($cacheentry->id, 'Registration URL is empty.');
             throw new \moodle_exception('error_ssrf_blocked', 'local_ltifederation');
@@ -69,18 +90,18 @@ class registration_engine {
         $providerhost = parse_url($providerurl, PHP_URL_HOST);
 
         if (empty($reghost) || strtolower($reghost) !== strtolower($providerhost ?? '')) {
-            $this->update_cache_error(
-                $cacheentry->id,
-                "SSRF blocked: registration host '{$reghost}' does not match provider host '{$providerhost}'."
-            );
+            $errmsg = "SSRF blocked: registration host '{$reghost}' does not match provider host '{$providerhost}'.";
+            $this->update_cache_error($cacheentry->id, $errmsg);
+            mtrace("local_ltifederation registration_engine: {$errmsg}");
             throw new \moodle_exception('error_ssrf_blocked', 'local_ltifederation');
         }
 
-        // --- Step 2: Idempotency check ---
+        // --- Step 3: Idempotency check (by lti_type_id) ---
         if (!empty($cacheentry->lti_type_id)) {
             $existing = $DB->get_record('lti_types', ['id' => $cacheentry->lti_type_id]);
             if ($existing && $existing->state == LTI_TOOL_STATE_CONFIGURED) {
                 // Already registered and configured; nothing to do.
+                mtrace("local_ltifederation registration_engine: tool '{$cacheentry->name}' already registered (lti_type_id={$cacheentry->lti_type_id}), skipping.");
                 return;
             }
         }
@@ -93,11 +114,44 @@ class registration_engine {
             );
             if ($existingbytoken && $existingbytoken->status == 1) {
                 // Already a complete registration for this token.
+                mtrace("local_ltifederation registration_engine: tool '{$cacheentry->name}' already has a complete app_registration, skipping.");
                 return;
             }
         }
 
-        // --- Step 3: Generate JWT registration token ---
+        // --- Step 4: Orphan detection ---
+        // Check for an existing lti_types row that shares the same base URL (launch URL pattern).
+        // The launch URL for LTI Advantage tools follows a known pattern from enrol_lti.
+        $launchurl = rtrim($providerurl, '/') . '/enrol/lti/launch.php';
+        $orphan = $DB->get_record_select(
+            'lti_types',
+            "baseurl = ? AND ltiversion = 'LTI-1.3.0'",
+            [$launchurl]
+        );
+        if ($orphan) {
+            // Link the orphan to the cache entry instead of registering again.
+            mtrace("local_ltifederation registration_engine: orphan lti_types row found (id={$orphan->id}), linking to cache entry '{$cacheentry->name}'.");
+            $DB->update_record('local_ltifed_catalog_cache', (object) [
+                'id'             => $cacheentry->id,
+                'lti_type_id'    => $orphan->id,
+                'regstate'       => 'registered',
+                'regerror'       => null,
+                'timeregistered' => time(),
+            ]);
+            return;
+        }
+
+        // --- Step 5: Rate limiting ---
+        // Use timefetched as a proxy for "last sync attempt time".
+        // If a registration was attempted in the last 60 seconds, skip.
+        if (!empty($cacheentry->timefetched) && (time() - $cacheentry->timefetched) < self::MIN_RETRY_INTERVAL) {
+            if ($cacheentry->regstate === 'error') {
+                mtrace("local_ltifederation registration_engine: rate limit — skipping retry for '{$cacheentry->name}' (last attempt {$cacheentry->timefetched}).");
+                return;
+            }
+        }
+
+        // --- Step 6: Generate JWT registration token ---
         $sub   = registration_helper::get()->new_clientid();
         $scope = registration_helper::REG_TOKEN_OP_NEW_REG;
         $now   = time();
@@ -115,21 +169,23 @@ class registration_engine {
             }
             $regtoken = JWT::encode($payload, $privatekey['key'], 'RS256', $privatekey['kid']);
         } catch (\Exception $e) {
-            $this->update_cache_error($cacheentry->id, 'JWT encoding failed: ' . $e->getMessage());
+            $errmsg = 'JWT encoding failed: ' . $e->getMessage();
+            $this->update_cache_error($cacheentry->id, $errmsg);
+            mtrace("local_ltifederation registration_engine ERROR for '{$cacheentry->name}': {$errmsg}");
             throw new \moodle_exception('error_ws_call_failed', 'local_ltifederation', '', $e->getMessage());
         }
 
-        // --- Step 4: Build full registration URL ---
-        $confurl  = new \moodle_url('/mod/lti/openid-configuration.php');
-        $fullurl  = new \moodle_url($regurl);
+        // --- Step 7: Build full registration URL ---
+        $confurl = new \moodle_url('/mod/lti/openid-configuration.php');
+        $fullurl = new \moodle_url($regurl);
         $fullurl->param('openid_configuration', $confurl->out(false));
         $fullurl->param('registration_token', $regtoken);
 
-        // --- Step 5: GET the full registration URL ---
+        // --- Step 8: GET the full registration URL ---
         // This triggers enrol_lti's register.php on the provider side which in turn
         // makes a POST to our /mod/lti/openid-configuration endpoint.
-        // In server-to-server mode we GET the provider's register.php; it will POST
-        // back to our mod/lti registration endpoint.
+        mtrace("local_ltifederation registration_engine: attempting registration for tool '{$cacheentry->name}' via {$fullurl->out(false)}");
+
         try {
             $curl = new \curl();
             $curl->setopt(['CURLOPT_FOLLOWLOCATION' => true, 'CURLOPT_MAXREDIRS' => 5]);
@@ -139,17 +195,19 @@ class registration_engine {
                 throw new \coding_exception("cURL error {$errno}: {$result}");
             }
         } catch (\Exception $e) {
-            $this->update_cache_error($cacheentry->id, 'HTTP request failed: ' . $e->getMessage());
+            $errmsg = 'HTTP request failed: ' . $e->getMessage();
+            $this->update_cache_error($cacheentry->id, $errmsg);
+            mtrace("local_ltifederation registration_engine ERROR for '{$cacheentry->name}': {$errmsg}");
             throw new \moodle_exception('error_ws_call_failed', 'local_ltifederation', '', $e->getMessage());
         }
 
-        // --- Step 6: Find newly created lti_types row by clientid (sub) ---
+        // --- Step 9: Find newly created lti_types row by clientid (sub) ---
         $ltityperecord = $DB->get_record('lti_types', ['clientid' => $sub]);
         if ($ltityperecord) {
             // Set state to configured.
             $DB->set_field('lti_types', 'state', LTI_TOOL_STATE_CONFIGURED, ['id' => $ltityperecord->id]);
 
-            // --- Step 7: Update cache entry ---
+            // --- Step 10: Update cache entry ---
             $DB->update_record('local_ltifed_catalog_cache', (object) [
                 'id'             => $cacheentry->id,
                 'lti_type_id'    => $ltityperecord->id,
@@ -157,6 +215,7 @@ class registration_engine {
                 'regerror'       => null,
                 'timeregistered' => time(),
             ]);
+            mtrace("local_ltifederation registration_engine: tool '{$cacheentry->name}' registered successfully (lti_types id={$ltityperecord->id}).");
         } else {
             // Registration may have worked but we didn't find the lti_types row.
             // Mark as pending for manual verification.
@@ -165,6 +224,7 @@ class registration_engine {
                 'regstate' => 'pending',
                 'regerror' => 'Registration request sent; lti_types row not yet found.',
             ]);
+            mtrace("local_ltifederation registration_engine: tool '{$cacheentry->name}' registration sent but lti_types row not found — marked pending.");
         }
     }
 
