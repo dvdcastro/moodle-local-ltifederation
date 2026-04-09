@@ -25,6 +25,26 @@
 defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
-    // Adhoc tasks do not need to be declared here; they are queued dynamically.
-    // The sync_tools class is referenced when scheduling via \core\task\manager::queue_adhoc_task().
+    // Scheduled task: sync all providers with autosync=1 (daily at 3:00 am).
+    [
+        'classname' => '\local_ltifederation\task\sync_all_providers',
+        'blocking'  => 0,
+        'minute'    => '0',
+        'hour'      => '3',
+        'day'       => '*',
+        'month'     => '*',
+        'dayofweek' => '*',
+        'disabled'  => 0,
+    ],
+    // Scheduled task: clean up expired draft registrations (daily at 3:30 am).
+    [
+        'classname' => '\local_ltifederation\task\cleanup_draft_registrations',
+        'blocking'  => 0,
+        'minute'    => '30',
+        'hour'      => '3',
+        'day'       => '*',
+        'month'     => '*',
+        'dayofweek' => '*',
+        'disabled'  => 0,
+    ],
 ];
