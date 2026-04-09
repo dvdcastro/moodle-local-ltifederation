@@ -39,7 +39,7 @@ class sync_all_providers_test extends \advanced_testcase {
      */
     private function create_provider(string $label, int $autosync): int {
         global $DB;
-        return $DB->insert_record('local_ltifed_providers', (object) [
+        return $DB->insert_record('local_ltifederation_providers', (object) [
             'label'        => $label,
             'providerurl'  => 'https://' . strtolower(str_replace(' ', '', $label)) . '.example.com',
             'wstoken'      => 'dummytoken',
@@ -78,7 +78,7 @@ class sync_all_providers_test extends \advanced_testcase {
         // Verify it was queued for the correct provider.
         $queued = reset($adhoctasks);
         $customdata = json_decode($queued->customdata);
-        $provider = $DB->get_record('local_ltifed_providers', ['label' => 'AutoSync Provider']);
+        $provider = $DB->get_record('local_ltifederation_providers', ['label' => 'AutoSync Provider']);
         $this->assertEquals($provider->id, $customdata->providerid);
     }
 

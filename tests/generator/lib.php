@@ -54,7 +54,7 @@ class local_ltifederation_generator extends testing_data_generator {
             }
         }
 
-        $record->id = $DB->insert_record('local_ltifed_providers', $record);
+        $record->id = $DB->insert_record('local_ltifederation_providers', $record);
         return $record;
     }
 
@@ -74,7 +74,7 @@ class local_ltifederation_generator extends testing_data_generator {
 
         // Allow providerid to be specified by provider label.
         if (isset($record->providerid) && !is_numeric($record->providerid)) {
-            $provider = $DB->get_record('local_ltifed_providers', ['label' => $record->providerid], '*', MUST_EXIST);
+            $provider = $DB->get_record('local_ltifederation_providers', ['label' => $record->providerid], '*', MUST_EXIST);
             $record->providerid = $provider->id;
         }
 
@@ -102,7 +102,7 @@ class local_ltifederation_generator extends testing_data_generator {
             }
         }
 
-        $record->id = $DB->insert_record('local_ltifed_catalog_cache', $record);
+        $record->id = $DB->insert_record('local_ltifederation_catalog_cache', $record);
         return $record;
     }
 }

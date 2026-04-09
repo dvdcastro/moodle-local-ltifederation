@@ -42,7 +42,7 @@ require_login();
 require_capability('local/ltifederation:manageproviders', $context);
 
 // Load provider.
-$provider = $DB->get_record('local_ltifed_providers', ['id' => $providerid]);
+$provider = $DB->get_record('local_ltifederation_providers', ['id' => $providerid]);
 if (!$provider) {
     throw new moodle_exception('error_invalid_provider', 'local_ltifederation');
 }
@@ -77,7 +77,7 @@ if ($action === 'register' && !empty($ids)) {
     $errors  = [];
 
     foreach ($ids as $cacheentryid) {
-        $entry = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid, 'providerid' => $providerid]);
+        $entry = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid, 'providerid' => $providerid]);
         if (!$entry) {
             continue;
         }
@@ -150,7 +150,7 @@ echo html_writer::end_div(); // card-body
 echo html_writer::end_div(); // card
 
 // Tool catalog table.
-$tools = $DB->get_records('local_ltifed_catalog_cache', ['providerid' => $providerid], 'name ASC');
+$tools = $DB->get_records('local_ltifederation_catalog_cache', ['providerid' => $providerid], 'name ASC');
 
 if (empty($tools)) {
     echo $OUTPUT->notification(get_string('no_tools', 'local_ltifederation'), 'info');

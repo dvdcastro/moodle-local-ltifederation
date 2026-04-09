@@ -49,7 +49,7 @@ class sync_all_providers extends \core\task\scheduled_task {
     public function execute(): void {
         global $DB;
 
-        $providers = $DB->get_records('local_ltifed_providers', ['autosync' => 1]);
+        $providers = $DB->get_records('local_ltifederation_providers', ['autosync' => 1]);
 
         if (empty($providers)) {
             mtrace('local_ltifederation sync_all_providers: no providers with autosync enabled.');

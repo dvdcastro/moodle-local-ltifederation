@@ -24,6 +24,8 @@
 
 namespace local_ltifederation\external;
 
+defined('MOODLE_INTERNAL') || die();
+
 use core_external\external_api;
 use externallib_advanced_testcase;
 

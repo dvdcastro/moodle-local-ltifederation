@@ -53,12 +53,12 @@ $confirm  = optional_param('confirm', 0, PARAM_BOOL);
 if ($action === 'delete' && $id > 0) {
     require_sesskey();
     if ($confirm) {
-        $DB->delete_records('local_ltifed_catalog_cache', ['providerid' => $id]);
-        $DB->delete_records('local_ltifed_providers', ['id' => $id]);
+        $DB->delete_records('local_ltifederation_catalog_cache', ['providerid' => $id]);
+        $DB->delete_records('local_ltifederation_providers', ['id' => $id]);
         \core\notification::success(get_string('provider_deleted', 'local_ltifederation'));
         redirect($PAGE->url);
     } else {
-        $provider = $DB->get_record('local_ltifed_providers', ['id' => $id]);
+        $provider = $DB->get_record('local_ltifederation_providers', ['id' => $id]);
         if ($provider) {
             echo $OUTPUT->header();
             echo $OUTPUT->confirm(
@@ -75,7 +75,7 @@ if ($action === 'delete' && $id > 0) {
 // Handle sync now action.
 if ($action === 'sync' && $id > 0) {
     require_sesskey();
-    $provider = $DB->get_record('local_ltifed_providers', ['id' => $id]);
+    $provider = $DB->get_record('local_ltifederation_providers', ['id' => $id]);
     if ($provider) {
         $task = new sync_tools();
         $task->set_custom_data(['providerid' => $id]);
@@ -105,10 +105,10 @@ if ($form->is_cancelled()) {
 
     if ($data->id > 0) {
         $record->id = $data->id;
-        $DB->update_record('local_ltifed_providers', $record);
+        $DB->update_record('local_ltifederation_providers', $record);
     } else {
         $record->timecreated = time();
-        $DB->insert_record('local_ltifed_providers', $record);
+        $DB->insert_record('local_ltifederation_providers', $record);
     }
     \core\notification::success(get_string('provider_saved', 'local_ltifederation'));
     redirect($PAGE->url);
@@ -116,7 +116,7 @@ if ($form->is_cancelled()) {
 
 // Pre-populate form for edit.
 if ($action === 'edit' && $id > 0) {
-    $provider = $DB->get_record('local_ltifed_providers', ['id' => $id]);
+    $provider = $DB->get_record('local_ltifederation_providers', ['id' => $id]);
     if ($provider) {
         // Do not pre-populate the token for security; user must re-enter if they want to change.
         $formdata = clone $provider;
@@ -152,7 +152,7 @@ if ($action === 'edit') {
 }
 
 // Providers table.
-$providers = $DB->get_records('local_ltifed_providers', null, 'timecreated ASC');
+$providers = $DB->get_records('local_ltifederation_providers', null, 'timecreated ASC');
 
 if (empty($providers)) {
     echo $OUTPUT->notification(get_string('no_providers', 'local_ltifederation'), 'info');

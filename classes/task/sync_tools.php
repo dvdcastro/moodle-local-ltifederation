@@ -28,7 +28,7 @@ use local_ltifederation\encryption_helper;
 
 /**
  * Adhoc task that fetches the tool catalog from a remote provider and upserts
- * into local_ltifed_catalog_cache.
+ * into local_ltifederation_catalog_cache.
  */
 class sync_tools extends \core\task\adhoc_task {
     /**
@@ -56,7 +56,7 @@ class sync_tools extends \core\task\adhoc_task {
             return;
         }
 
-        $provider = $DB->get_record('local_ltifed_providers', ['id' => $providerid]);
+        $provider = $DB->get_record('local_ltifederation_providers', ['id' => $providerid]);
         if (!$provider) {
             mtrace("local_ltifederation sync_tools: provider ID {$providerid} not found.");
             return;
@@ -126,7 +126,7 @@ class sync_tools extends \core\task\adhoc_task {
             $remoteuuids[] = $remoteuuid;
 
             // Check if we already have a cache entry for this tool.
-            $existing = $DB->get_record('local_ltifed_catalog_cache', [
+            $existing = $DB->get_record('local_ltifederation_catalog_cache', [
                 'providerid'  => $providerid,
                 'remoteuuid'  => $remoteuuid,
             ]);
@@ -148,14 +148,14 @@ class sync_tools extends \core\task\adhoc_task {
             if ($existing) {
                 $record->id = $existing->id;
                 // Preserve local registration state unless explicitly clearing.
-                $DB->update_record('local_ltifed_catalog_cache', $record);
+                $DB->update_record('local_ltifederation_catalog_cache', $record);
                 mtrace("  Updated tool: {$record->name}");
             } else {
                 $record->lti_type_id    = null;
                 $record->regstate       = 'none';
                 $record->regerror       = null;
                 $record->timeregistered = null;
-                $DB->insert_record('local_ltifed_catalog_cache', $record);
+                $DB->insert_record('local_ltifederation_catalog_cache', $record);
                 mtrace("  Inserted tool: {$record->name}");
             }
         }
@@ -164,7 +164,7 @@ class sync_tools extends \core\task\adhoc_task {
         if (!empty($remoteuuids)) {
             [$notinsql, $notinparams] = $DB->get_in_or_equal($remoteuuids, SQL_PARAMS_NAMED, 'uuid', false);
             $DB->execute(
-                "UPDATE {local_ltifed_catalog_cache}
+                "UPDATE {local_ltifederation_catalog_cache}
                     SET remotestatus = 1
                   WHERE providerid = :providerid
                     AND remoteuuid {$notinsql}",
@@ -173,7 +173,7 @@ class sync_tools extends \core\task\adhoc_task {
         }
 
         // Update provider sync status.
-        $DB->update_record('local_ltifed_providers', (object) [
+        $DB->update_record('local_ltifederation_providers', (object) [
             'id'          => $providerid,
             'lastsync'    => $now,
             'syncstatus'  => 'ok',
@@ -193,7 +193,7 @@ class sync_tools extends \core\task\adhoc_task {
     private function mark_provider_error(\stdClass $provider, string $message): void {
         global $DB;
         mtrace("local_ltifederation sync_tools ERROR for '{$provider->label}': {$message}");
-        $DB->update_record('local_ltifed_providers', (object) [
+        $DB->update_record('local_ltifederation_providers', (object) [
             'id'           => $provider->id,
             'lastsync'     => time(),
             'syncstatus'   => 'error',

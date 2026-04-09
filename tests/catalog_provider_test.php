@@ -24,8 +24,7 @@
 
 namespace local_ltifederation;
 
-global $CFG;
-require_once($CFG->dirroot . '/enrol/lti/tests/helper.php');
+defined('MOODLE_INTERNAL') || die();
 
 /**
  * Test class for catalog_provider.

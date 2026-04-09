@@ -86,7 +86,7 @@ class registration_engine_test extends \advanced_testcase {
     public function test_ssrf_blocked_when_host_mismatch(): void {
         // Insert a real provider and cache entry so DB updates work.
         global $DB;
-        $providerid = $DB->insert_record('local_ltifed_providers', (object) [
+        $providerid = $DB->insert_record('local_ltifederation_providers', (object) [
             'label'        => 'Test Provider',
             'providerurl'  => 'https://provider.example.com',
             'wstoken'      => 'dummytoken',
@@ -95,7 +95,7 @@ class registration_engine_test extends \advanced_testcase {
             'timemodified' => time(),
         ]);
 
-        $cacheentryid = $DB->insert_record('local_ltifed_catalog_cache', (object) [
+        $cacheentryid = $DB->insert_record('local_ltifederation_catalog_cache', (object) [
             'providerid'         => $providerid,
             'remoteid'           => 5,
             'remoteuuid'         => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
@@ -108,15 +108,15 @@ class registration_engine_test extends \advanced_testcase {
             'timefetched'        => time(),
         ]);
 
-        $provider   = $DB->get_record('local_ltifed_providers', ['id' => $providerid]);
-        $cacheentry = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid]);
+        $provider   = $DB->get_record('local_ltifederation_providers', ['id' => $providerid]);
+        $cacheentry = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid]);
 
         $engine = new registration_engine();
         $this->expectException(\moodle_exception::class);
         $engine->register_tool($cacheentry, $provider);
 
         // After exception, verify regstate is 'error'.
-        $updated = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid]);
+        $updated = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid]);
         $this->assertEquals('error', $updated->regstate);
         $this->assertStringContainsString('SSRF', $updated->regerror);
     }
@@ -127,7 +127,7 @@ class registration_engine_test extends \advanced_testcase {
     public function test_idempotency_skips_already_registered_tool(): void {
         global $DB;
 
-        $providerid = $DB->insert_record('local_ltifed_providers', (object) [
+        $providerid = $DB->insert_record('local_ltifederation_providers', (object) [
             'label'        => 'Test Provider',
             'providerurl'  => 'https://provider.example.com',
             'wstoken'      => 'dummytoken',
@@ -151,7 +151,7 @@ class registration_engine_test extends \advanced_testcase {
             'createdby'   => 2,
         ]);
 
-        $cacheentryid = $DB->insert_record('local_ltifed_catalog_cache', (object) [
+        $cacheentryid = $DB->insert_record('local_ltifederation_catalog_cache', (object) [
             'providerid'         => $providerid,
             'remoteid'           => 5,
             'remoteuuid'         => 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee',
@@ -165,15 +165,15 @@ class registration_engine_test extends \advanced_testcase {
             'timefetched'        => time(),
         ]);
 
-        $provider   = $DB->get_record('local_ltifed_providers', ['id' => $providerid]);
-        $cacheentry = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid]);
+        $provider   = $DB->get_record('local_ltifederation_providers', ['id' => $providerid]);
+        $cacheentry = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid]);
 
         $engine = new registration_engine();
         // Should not throw and should return early.
         $engine->register_tool($cacheentry, $provider);
 
         // Verify the cache entry was NOT modified (still 'registered').
-        $updated = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid]);
+        $updated = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid]);
         $this->assertEquals('registered', $updated->regstate);
     }
 
@@ -183,7 +183,7 @@ class registration_engine_test extends \advanced_testcase {
     public function test_empty_registration_url_causes_error(): void {
         global $DB;
 
-        $providerid = $DB->insert_record('local_ltifed_providers', (object) [
+        $providerid = $DB->insert_record('local_ltifederation_providers', (object) [
             'label'        => 'Test Provider',
             'providerurl'  => 'https://provider.example.com',
             'wstoken'      => 'dummytoken',
@@ -192,7 +192,7 @@ class registration_engine_test extends \advanced_testcase {
             'timemodified' => time(),
         ]);
 
-        $cacheentryid = $DB->insert_record('local_ltifed_catalog_cache', (object) [
+        $cacheentryid = $DB->insert_record('local_ltifederation_catalog_cache', (object) [
             'providerid'         => $providerid,
             'remoteid'           => 5,
             'remoteuuid'         => 'cccccccc-bbbb-cccc-dddd-eeeeeeeeeeee',
@@ -205,14 +205,14 @@ class registration_engine_test extends \advanced_testcase {
             'timefetched'        => time(),
         ]);
 
-        $provider   = $DB->get_record('local_ltifed_providers', ['id' => $providerid]);
-        $cacheentry = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid]);
+        $provider   = $DB->get_record('local_ltifederation_providers', ['id' => $providerid]);
+        $cacheentry = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid]);
 
         $engine = new registration_engine();
         $this->expectException(\moodle_exception::class);
         $engine->register_tool($cacheentry, $provider);
 
-        $updated = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid]);
+        $updated = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid]);
         $this->assertEquals('error', $updated->regstate);
     }
 
@@ -226,7 +226,7 @@ class registration_engine_test extends \advanced_testcase {
     public function test_valid_host_passes_ssrf_check(): void {
         global $DB;
 
-        $providerid = $DB->insert_record('local_ltifed_providers', (object) [
+        $providerid = $DB->insert_record('local_ltifederation_providers', (object) [
             'label'        => 'Test Provider',
             'providerurl'  => 'https://provider.example.com',
             'wstoken'      => 'dummytoken',
@@ -235,7 +235,7 @@ class registration_engine_test extends \advanced_testcase {
             'timemodified' => time(),
         ]);
 
-        $cacheentryid = $DB->insert_record('local_ltifed_catalog_cache', (object) [
+        $cacheentryid = $DB->insert_record('local_ltifederation_catalog_cache', (object) [
             'providerid'         => $providerid,
             'remoteid'           => 10,
             'remoteuuid'         => 'dddddddd-bbbb-cccc-dddd-eeeeeeeeeeee',
@@ -248,8 +248,8 @@ class registration_engine_test extends \advanced_testcase {
             'timefetched'        => time(),
         ]);
 
-        $provider   = $DB->get_record('local_ltifed_providers', ['id' => $providerid]);
-        $cacheentry = $DB->get_record('local_ltifed_catalog_cache', ['id' => $cacheentryid]);
+        $provider   = $DB->get_record('local_ltifederation_providers', ['id' => $providerid]);
+        $cacheentry = $DB->get_record('local_ltifederation_catalog_cache', ['id' => $cacheentryid]);
 
         $engine = new registration_engine();
 

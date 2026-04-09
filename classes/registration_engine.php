@@ -24,6 +24,8 @@
 
 namespace local_ltifederation;
 
+defined('MOODLE_INTERNAL') || die();
+
 require_once($GLOBALS['CFG']->dirroot . '/mod/lti/locallib.php');
 
 use Firebase\JWT\JWT;
@@ -55,8 +57,8 @@ class registration_engine {
      * 9. Find new lti_types row by clientid, mark state=1.
      * 10. Update cache entry regstate.
      *
-     * @param \stdClass $cacheentry  A row from local_ltifed_catalog_cache.
-     * @param \stdClass $provider    A row from local_ltifed_providers.
+     * @param \stdClass $cacheentry  A row from local_ltifederation_catalog_cache.
+     * @param \stdClass $provider    A row from local_ltifederation_providers.
      * @throws \moodle_exception     On SSRF detection or other fatal errors.
      */
     public function register_tool(\stdClass $cacheentry, \stdClass $provider): void {
@@ -128,7 +130,7 @@ class registration_engine {
         if ($orphan) {
             // Link the orphan to the cache entry instead of registering again.
             mtrace("local_ltifederation registration_engine: orphan lti_types row found (id={$orphan->id}), linking to cache entry '{$cacheentry->name}'.");
-            $DB->update_record('local_ltifed_catalog_cache', (object) [
+            $DB->update_record('local_ltifederation_catalog_cache', (object) [
                 'id'             => $cacheentry->id,
                 'lti_type_id'    => $orphan->id,
                 'regstate'       => 'registered',
@@ -205,7 +207,7 @@ class registration_engine {
             $DB->set_field('lti_types', 'state', LTI_TOOL_STATE_CONFIGURED, ['id' => $ltityperecord->id]);
 
             // --- Step 10: Update cache entry ---
-            $DB->update_record('local_ltifed_catalog_cache', (object) [
+            $DB->update_record('local_ltifederation_catalog_cache', (object) [
                 'id'             => $cacheentry->id,
                 'lti_type_id'    => $ltityperecord->id,
                 'regstate'       => 'registered',
@@ -216,7 +218,7 @@ class registration_engine {
         } else {
             // Registration may have worked but we didn't find the lti_types row.
             // Mark as pending for manual verification.
-            $DB->update_record('local_ltifed_catalog_cache', (object) [
+            $DB->update_record('local_ltifederation_catalog_cache', (object) [
                 'id'       => $cacheentry->id,
                 'regstate' => 'pending',
                 'regerror' => 'Registration request sent; lti_types row not yet found.',
@@ -233,7 +235,7 @@ class registration_engine {
      */
     private function update_cache_error(int $cacheentryid, string $message): void {
         global $DB;
-        $DB->update_record('local_ltifed_catalog_cache', (object) [
+        $DB->update_record('local_ltifederation_catalog_cache', (object) [
             'id'       => $cacheentryid,
             'regstate' => 'error',
             'regerror' => $message,

@@ -54,7 +54,7 @@ class behat_local_ltifederation_generator extends behat_generator_base {
 
         if (isset($elementdata['providerid']) && !is_numeric($elementdata['providerid'])) {
             $provider = $DB->get_record(
-                'local_ltifed_providers',
+                'local_ltifederation_providers',
                 ['label' => $elementdata['providerid']],
                 '*',
                 MUST_EXIST

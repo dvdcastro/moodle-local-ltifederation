@@ -62,7 +62,7 @@ class provider_test extends \advanced_testcase {
     }
 
     /**
-     * Test that get_metadata() declares the local_ltifed_providers table.
+     * Test that get_metadata() declares the local_ltifederation_providers table.
      */
     public function test_metadata_includes_providers_table(): void {
         $collection = new collection('local_ltifederation');
@@ -74,14 +74,14 @@ class provider_test extends \advanced_testcase {
         }, $items);
 
         $this->assertContains(
-            'local_ltifed_providers',
+            'local_ltifederation_providers',
             $tablenames,
-            'Metadata should include the local_ltifed_providers database table.'
+            'Metadata should include the local_ltifederation_providers database table.'
         );
     }
 
     /**
-     * Test that get_metadata() declares the local_ltifed_catalog_cache table.
+     * Test that get_metadata() declares the local_ltifederation_catalog_cache table.
      */
     public function test_metadata_includes_catalog_cache_table(): void {
         $collection = new collection('local_ltifederation');
@@ -93,9 +93,9 @@ class provider_test extends \advanced_testcase {
         }, $items);
 
         $this->assertContains(
-            'local_ltifed_catalog_cache',
+            'local_ltifederation_catalog_cache',
             $tablenames,
-            'Metadata should include the local_ltifed_catalog_cache database table.'
+            'Metadata should include the local_ltifederation_catalog_cache database table.'
         );
     }
 

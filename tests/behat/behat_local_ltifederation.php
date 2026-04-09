@@ -42,7 +42,7 @@ class behat_local_ltifederation extends behat_base {
     public function i_navigate_to_tool_catalog_for(string $providerlabel): void {
         global $DB;
 
-        $provider = $DB->get_record('local_ltifed_providers', ['label' => $providerlabel]);
+        $provider = $DB->get_record('local_ltifederation_providers', ['label' => $providerlabel]);
         if (!$provider) {
             throw new \RuntimeException("LTI provider with label '{$providerlabel}' not found in database.");
         }

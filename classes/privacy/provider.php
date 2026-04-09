@@ -51,35 +51,35 @@ class provider implements \core_privacy\local\metadata\provider {
 
         // Provider connection table: stores admin-configured settings only.
         $collection->add_database_table(
-            'local_ltifed_providers',
+            'local_ltifederation_providers',
             [
-                'label'        => 'privacy:metadata:local_ltifed_providers:label',
-                'providerurl'  => 'privacy:metadata:local_ltifed_providers:providerurl',
-                'wstoken'      => 'privacy:metadata:local_ltifed_providers:wstoken',
-                'autosync'     => 'privacy:metadata:local_ltifed_providers:autosync',
-                'lastsync'     => 'privacy:metadata:local_ltifed_providers:lastsync',
-                'syncstatus'   => 'privacy:metadata:local_ltifed_providers:syncstatus',
-                'syncmessage'  => 'privacy:metadata:local_ltifed_providers:syncmessage',
+                'label'        => 'privacy:metadata:local_ltifederation_providers:label',
+                'providerurl'  => 'privacy:metadata:local_ltifederation_providers:providerurl',
+                'wstoken'      => 'privacy:metadata:local_ltifederation_providers:wstoken',
+                'autosync'     => 'privacy:metadata:local_ltifederation_providers:autosync',
+                'lastsync'     => 'privacy:metadata:local_ltifederation_providers:lastsync',
+                'syncstatus'   => 'privacy:metadata:local_ltifederation_providers:syncstatus',
+                'syncmessage'  => 'privacy:metadata:local_ltifederation_providers:syncmessage',
             ],
-            'privacy:metadata:local_ltifed_providers'
+            'privacy:metadata:local_ltifederation_providers'
         );
 
         // Tool catalog cache: stores tool metadata fetched from remote providers.
         $collection->add_database_table(
-            'local_ltifed_catalog_cache',
+            'local_ltifederation_catalog_cache',
             [
-                'providerid'         => 'privacy:metadata:local_ltifed_catalog_cache:providerid',
-                'remoteuuid'         => 'privacy:metadata:local_ltifed_catalog_cache:remoteuuid',
-                'name'               => 'privacy:metadata:local_ltifed_catalog_cache:name',
-                'description'        => 'privacy:metadata:local_ltifed_catalog_cache:description',
-                'coursefullname'     => 'privacy:metadata:local_ltifed_catalog_cache:coursefullname',
-                'ltiversion'         => 'privacy:metadata:local_ltifed_catalog_cache:ltiversion',
-                'registration_url'   => 'privacy:metadata:local_ltifed_catalog_cache:registration_url',
-                'registration_token' => 'privacy:metadata:local_ltifed_catalog_cache:registration_token',
-                'regstate'           => 'privacy:metadata:local_ltifed_catalog_cache:regstate',
-                'regerror'           => 'privacy:metadata:local_ltifed_catalog_cache:regerror',
+                'providerid'         => 'privacy:metadata:local_ltifederation_catalog_cache:providerid',
+                'remoteuuid'         => 'privacy:metadata:local_ltifederation_catalog_cache:remoteuuid',
+                'name'               => 'privacy:metadata:local_ltifederation_catalog_cache:name',
+                'description'        => 'privacy:metadata:local_ltifederation_catalog_cache:description',
+                'coursefullname'     => 'privacy:metadata:local_ltifederation_catalog_cache:coursefullname',
+                'ltiversion'         => 'privacy:metadata:local_ltifederation_catalog_cache:ltiversion',
+                'registration_url'   => 'privacy:metadata:local_ltifederation_catalog_cache:registration_url',
+                'registration_token' => 'privacy:metadata:local_ltifederation_catalog_cache:registration_token',
+                'regstate'           => 'privacy:metadata:local_ltifederation_catalog_cache:regstate',
+                'regerror'           => 'privacy:metadata:local_ltifederation_catalog_cache:regerror',
             ],
-            'privacy:metadata:local_ltifed_catalog_cache'
+            'privacy:metadata:local_ltifederation_catalog_cache'
         );
 
         // External systems: this plugin communicates with remote Moodle sites on behalf of the site admin.

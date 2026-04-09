@@ -24,6 +24,8 @@
 
 namespace local_ltifederation\form;
 
+defined('MOODLE_INTERNAL') || die();
+
 require_once($GLOBALS['CFG']->libdir . '/formslib.php');
 
 /**
@@ -82,7 +84,7 @@ class provider_form extends \moodleform {
         if (!empty($data['providerurl'])) {
             $parsed = parse_url($data['providerurl']);
             if (!$parsed || empty($parsed['scheme']) || empty($parsed['host'])) {
-                $errors['providerurl'] = get_string('invalidurl', 'core');
+                $errors['providerurl'] = get_string('error_invalidurl', 'local_ltifederation');
             }
         }
 
