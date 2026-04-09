@@ -142,7 +142,7 @@ $string['task_cleanup_draft_registrations'] = 'Clean up expired LTI draft regist
 
 // Errors.
 $string['error_invalid_provider'] = 'Invalid provider ID.';
-$string['error_invalidurl'] = 'Please enter a valid URL (e.g. https://example.com).';
+$string['error_invalidurl'] = 'You must supply a valid URL';
 $string['error_ssrf_blocked'] = 'Registration URL host does not match provider URL host. Blocked for security.';
 $string['error_https_required'] = 'Registration URL must use HTTPS for security.';
 $string['error_already_registered'] = 'This tool is already registered.';

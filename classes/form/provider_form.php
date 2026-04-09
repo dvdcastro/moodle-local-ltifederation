@@ -50,7 +50,7 @@ class provider_form extends \moodleform {
 
         // Provider URL.
         $mform->addElement('text', 'providerurl', get_string('providerurl', 'local_ltifederation'), ['size' => '80']);
-        $mform->setType('providerurl', PARAM_URL);
+        $mform->setType('providerurl', PARAM_RAW);
         $mform->addRule('providerurl', null, 'required', null, 'client');
         $mform->addHelpButton('providerurl', 'providerurl', 'local_ltifederation');
 
@@ -81,11 +81,9 @@ class provider_form extends \moodleform {
         $errors = parent::validation($data, $files);
 
         // Validate that providerurl is a valid URL.
-        if (!empty($data['providerurl'])) {
-            $parsed = parse_url($data['providerurl']);
-            if (!$parsed || empty($parsed['scheme']) || empty($parsed['host'])) {
-                $errors['providerurl'] = get_string('error_invalidurl', 'local_ltifederation');
-            }
+        $parsed = !empty($data['providerurl']) ? parse_url($data['providerurl']) : false;
+        if (!$parsed || empty($parsed['scheme']) || empty($parsed['host'])) {
+            $errors['providerurl'] = get_string('error_invalidurl', 'local_ltifederation');
         }
 
         return $errors;

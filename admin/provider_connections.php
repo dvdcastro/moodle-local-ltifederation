@@ -94,7 +94,7 @@ if ($form->is_cancelled()) {
     // Save provider.
     $record = new stdClass();
     $record->label       = $data->label;
-    $record->providerurl = rtrim($data->providerurl, '/');
+    $record->providerurl = clean_param(rtrim($data->providerurl, '/'), PARAM_URL);
     $record->autosync    = (int) $data->autosync;
     $record->timemodified = time();
 
