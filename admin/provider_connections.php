@@ -85,8 +85,9 @@ if ($action === 'sync' && $id > 0) {
     redirect($PAGE->url);
 }
 
-// Provider add/edit form.
-$form = new provider_form($PAGE->url);
+// Provider add/edit form. Include action/id in form action URL so they survive POST.
+$formaction = new moodle_url($PAGE->url, ['action' => 'edit', 'id' => $id]);
+$form = new provider_form($formaction);
 
 if ($form->is_cancelled()) {
     redirect($PAGE->url);
@@ -142,8 +143,8 @@ echo html_writer::div(
     'mb-3'
 );
 
-// Show form if in add/edit mode.
-if ($action === 'edit') {
+// Show form if in add/edit mode, or if submitted with validation errors.
+if ($action === 'edit' || $form->is_submitted()) {
     echo html_writer::start_div('card mb-4');
     echo html_writer::start_div('card-body');
     $form->display();
